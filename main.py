@@ -1,34 +1,22 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel
 import re
 
 app = FastAPI()
 
-class Entrada(BaseModel):
-    cpf: str | None = None
-    carteirinha: str | None = None
-    competencia: str
+class ConsultaRequest(BaseModel):
+    cpf: str
+    data: str  # formato MM/AAAA
 
-    @root_validator
-    def validar_campos(cls, values):
-        cpf = values.get('cpf')
-        carteirinha = values.get('carteirinha')
-        competencia = values.get('competencia')
+@app.post("/consultar")
+def consultar_dados(dados: ConsultaRequest):
+    # Validação simples do CPF
+    if not re.fullmatch(r"\d{11}", dados.cpf):
+        raise HTTPException(status_code=400, detail="CPF deve ter 11 dígitos.")
 
-        if not cpf and not carteirinha:
-            raise ValueError("É obrigatório informar CPF ou carteirinha.")
+    # Validação da data MM/AAAA
+    if not re.fullmatch(r"(0[1-9]|1[0-2])/\d{4}", dados.data):
+        raise HTTPException(status_code=400, detail="Data deve estar no formato MM/AAAA.")
 
-        if cpf and not re.fullmatch(r"\d{11}", cpf):
-            raise ValueError("CPF deve ter exatamente 11 dígitos numéricos.")
-
-        if carteirinha and len(carteirinha) != 17:
-            raise ValueError("Carteirinha deve ter exatamente 17 caracteres.")
-
-        if not re.fullmatch(r"(0[1-9]|1[0-2])/20\d{2}", competencia):
-            raise ValueError("Competência deve estar no formato MM/AAAA.")
-
-        return values
-
-@app.post("/receber")
-def receber_dados(dados: Entrada):
-    return {"mensagem": "Dados recebidos com sucesso", "dados": dados}
+    # Aqui pode colocar lógica real, por enquanto só retorna dados recebidos
+    return {"mensagem": "Consulta realizada com sucesso!", "cpf": dados.cpf, "mes_ano": dados.data}
